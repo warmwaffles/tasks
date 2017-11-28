@@ -310,33 +310,33 @@ task_summary() {
         fi
 
         if [[ ! -z $TAGS ]]
-            then
+        then
             if [[ ! $line =~ $TAGS ]]
-                then
+            then
                 continue
             fi
         fi
 
         if [[ ! -z $NOT_TAGS ]]
-            then
+        then
             if [[ $line =~ $NOT_TAGS ]]
-                then
+            then
                 continue
             fi
         fi
 
         if [[ ! -z $PROJECTS ]]
-            then
+        then
             if [[ ! $line =~ $PROJECTS ]]
-                then
+            then
                 continue
             fi
         fi
 
         if [[ ! -z $NOT_PROJECTS ]]
-            then
+        then
             if [[ $line =~ $NOT_PROJECTS ]]
-                then
+            then
                 continue
             fi
         fi
@@ -367,20 +367,57 @@ task_summary() {
         COMPLETED_AT=$(echo $line | extract_completed_at)
         COMPLETED_AT=$(date +'%s' --date "$COMPLETED_AT")
 
-        if [[ $COMPLETED_AT -lt $begin_yesterday || $COMPLETED_AT -gt $BEGIN_TODAY ]]
+        if [[ $COMPLETED_AT -lt $begin_yesterday ]]
+        then
+            continue
+        fi
+
+        if [[ $COMPLETED_AT -gt $begin_today ]]
         then
             continue
         fi
 
         if [[ ! -z $TAGS ]]
-            then
+        then
             if [[ ! $line =~ $TAGS ]]
-                then
+            then
                 continue
             fi
         fi
 
-        message=$(echo $line | extract_message)
+        if [[ ! -z $NOT_TAGS ]]
+        then
+            if [[ $line =~ $NOT_TAGS ]]
+            then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $PROJECTS ]]
+        then
+            if [[ ! $line =~ $PROJECTS ]]
+            then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $NOT_PROJECTS ]]
+        then
+            if [[ $line =~ $NOT_PROJECTS ]]
+            then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $TAGS ]]
+        then
+            if [[ ! $line =~ $TAGS ]]
+            then
+                continue
+            fi
+        fi
+
+        message=$(echo $line | extract_message | pretty_message)
         echo "  • $message"
     done < $CURRENT_LOG_FILE | sort -g
 }

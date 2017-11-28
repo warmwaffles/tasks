@@ -1,0 +1,770 @@
+#!/bin/bash
+
+#
+# A useful bash script to track your tasks that you have been doing from day to
+# day. This is not the fastest thing in the world, but it is relatively easy and
+# does its job well.
+#
+# Requirements:
+#
+# - ripgrep
+# - GNU Date (currently only thing I really use)
+# - sed
+# - perl
+#
+# I highly recommend you run
+#
+# $ tasks help
+#
+# To initially get a help blob about stuff. Then run `--help` or `-h` with all
+# of the sub commands to explore what they do.
+#
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+
+TASKS_BACKUP_DIR="$TASKS_DIRECTORY/backups/"
+CURRENT_LOG_FILE="$TASKS_DIRECTORY/current.log"
+ARCHIVE_LOG_FILE="$TASKS_DIRECTORY/archive.log"
+CLEANING_LOG_FILE="$TASKS_DIRECTORY/cleaning.log"
+
+# Setup the tasks directory if it hasn't been yet
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+    mkdir -p $TASKS_BACKUP_DIR
+
+    # Prepare the directory for git incase the user wants to back it up
+    echo "/backups" > $TASKS_DIRECTORY/.gitignore
+    echo "log.vacuum" >> $TASKS_DIRECTORY/.gitignore
+fi
+
+# Check to ensure our counter is still present
+if [[ ! -f $TASKS_DIRECTORY/taskid ]]
+then
+    echo "0" > $TASKS_DIRECTORY/taskid
+fi
+
+# Check to make sure the log files are present
+if [[ ! -f $CURRENT_LOG_FILE ]]
+then
+    touch $CURRENT_LOG_FILE
+fi
+
+if [[ ! -f $ARCHIVE_LOG_FILE  ]]
+then
+    touch $ARCHIVE_LOG_FILE
+fi
+
+COLOR_OFF='\e[00m'
+COLOR_BLACK='\e[0;30m'
+COLOR_RED='\e[0;31m'
+COLOR_GREEN='\e[0;32m'
+COLOR_YELLOW='\e[0;33m'
+COLOR_BLUE='\e[0;34m'
+COLOR_PURPLE='\e[0;35m'
+COLOR_CYAN='\e[0;36m'
+COLOR_WHITE='\e[0;37m'
+COLOR_BLACK_BOLD='\e[1;30m'
+COLOR_RED_BOLD='\e[1;31m'
+COLOR_GREEN_BOLD='\e[1;32m'
+COLOR_YELLOW_BOLD='\e[1;33m'
+COLOR_BLUE_BOLD='\e[1;34m'
+COLOR_PURPLE_BOLD='\e[1;35m'
+COLOR_CYAN_BOLD='\e[1;36m'
+COLOR_WHITE_BOLD='\e[1;37m'
+
+# Handy NOW variable
+NOW=$(date +"%F %R")
+
+#
+# Keep a semi atomic id counter around so that we can assign unique incrementing
+# ids to items
+#
+task_increment_id() {
+    ID=$(cat $TASKS_DIRECTORY/taskid)
+    ID=$((ID + 1))
+    echo "$ID" > $TASKS_DIRECTORY/taskid
+    echo "$ID"
+}
+
+join_by() {
+    local IFS="$1";
+    shift;
+    echo "$*";
+}
+
+#
+# Extract the completed at date stamp from the message
+#
+extract_completed_at() {
+    perl -pe 's/.*@completed\((.*)\).*/\1/g'
+}
+
+#
+# Extract the entire message without the ID and leading preamble
+#
+extract_message() {
+    perl -pe 's/\d+ - \[.?\] - (.*)/\1/g'
+}
+
+#
+# Make all the +tags pretty
+#
+pretty_tags() {
+    perl -pe "s/\\+(\\w+)/$COLOR_GREEN+\\1$COLOR_OFF/g"
+}
+
+#
+# Make all of the @completed tags pretty
+#
+pretty_completed() {
+    perl -pe "s/@(completed\\(.*\\))/$COLOR_CYAN@\\1$COLOR_OFF/g"
+}
+
+#
+# Make all of the priority tags pretty
+#
+pretty_priority() {
+    perl -pe "s/@(high|low|critical|important)/$COLOR_YELLOW@\\1$COLOR_OFF/g"
+}
+
+#
+# Make all of the project tags pretty
+#
+pretty_project() {
+    perl -pe "s/(#\w*)/$COLOR_BLUE\\1$COLOR_OFF/g"
+}
+
+pretty_message() {
+    pretty_tags | pretty_completed | pretty_priority | pretty_project
+}
+
+task_add_usage() {
+    cat <<TXT
+USAGE: task add [OPTIONS]
+
+ALIASES:
+    a
+
+OPTIONS:
+
+    -h, --help       Output this help message
+    -c, --completed  Mark this task as completed
+        --id         Provide the id to assign the task. Useful if you deleted
+                     a task and want to readd it later. Note, we will not try
+                     to validate the uniqueness of the id. It is up to you to
+                     make it uniq.
+TXT
+}
+
+#
+# Log a task
+#
+task_add() {
+    PARAMS=""
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                task_add_usage
+                exit 1
+                ;;
+
+            -c|--completed)
+                shift
+                COMPLETED="@completed($NOW)"
+                ;;
+
+            --id)
+                if [[ -z $2 ]]
+                then
+                    echo "--id requires an ID to be passed"
+                    exit 1
+                fi
+
+                ID=$2
+                shift 2
+                ;;
+            *)
+                PARAMS="$PARAMS $1"
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z $ID ]]
+    then
+        ID=$(task_increment_id)
+    fi
+
+    if [[ -z $COMPLETED ]]
+    then
+        MESSAGE="$ID - [ ] - $PARAMS"
+    else
+        MESSAGE="$ID - [x] - $PARAMS $COMPLETED"
+    fi
+
+    echo $MESSAGE >> $CURRENT_LOG_FILE
+    echo $MESSAGE
+}
+
+task_summary_usage() {
+    cat <<TXT
+USAGE: task summary [OPTIONS]
+
+Prints out a summary of todays tasks and yesterday's completed tasks.
+
+OPTIONS:
+
+    -h, --help                 Output this help message
+    -t, --tags <TAGS>          Only show tasks with the specific tags
+    -T, --not-tags <TAGS>      Exclude tasks with the specific tags
+    -p, --project <NAMES>      Only show the tasks for the specific projects
+    -P, --not-project <NAMES>  Exclude tasks for specific projects
+TXT
+}
+
+#
+# Get a summary of the work you did / plan on doing today and yesterday
+#
+task_summary() {
+    PARAMS=""
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                task_summary_usage
+                exit 1
+                ;;
+
+            -t|--tags)
+                if [[ -z $2 ]]
+                then
+                    echo "You must specify a tag or multiple tags with comma separation"
+                    exit 1
+                fi
+
+                TAGS=(${2//,/ })
+                TAGS=$(join_by '|' ${TAGS[@]})
+                shift 2
+                ;;
+
+            -T|--not-tags)
+                if [[ -z $2 ]]
+                then
+                    echo "You must specify a tag or multiple tags with comma separation"
+                    exit 1
+                fi
+
+                NOT_TAGS=(${2//,/ })
+                NOT_TAGS=$(join_by '|' ${NOT_TAGS[@]})
+                shift 2
+                ;;
+
+            -p|--projects)
+                if [[ -z $2 ]]
+                then
+                    echo "You must specify a tag or multiple tags with comma separation"
+                    exit 1
+                fi
+
+                PROJECTS=(${2//,/ })
+                PROJECTS=$(join_by '|' ${PROJECTS[@]})
+                shift 2
+                ;;
+
+            -P|--not-projects)
+                if [[ -z $2 ]]
+                then
+                    echo "You must specify a tag or multiple tags with comma separation"
+                    exit 1
+                fi
+
+                NOT_PROJECTS=(${2//,/ })
+                NOT_PROJECTS=$(join_by '|' ${NOT_PROJECTS[@]})
+                shift 2
+                ;;
+            *)
+                PARAMS="$PARAMS $1"
+                shift
+                ;;
+        esac
+    done
+
+    begin_today=$(date +'%s' --date "00:00 today")
+    end_today=$(date +'%s' --date "23:59 today")
+    begin_yesterday=$(date +'%s' --date "00:00 yesterday")
+
+    echo "*Today*"
+
+    while read line
+    do
+        status="uncompleted"
+        if [[ $line =~ '@completed' ]]
+        then
+            completed_at=$(echo $line | extract_completed_at)
+            completed_at=$(date +'%s' --date "$completed_at")
+            status="completed"
+        fi
+
+        if [[ ! -z $TAGS ]]
+            then
+            if [[ ! $line =~ $TAGS ]]
+                then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $NOT_TAGS ]]
+            then
+            if [[ $line =~ $NOT_TAGS ]]
+                then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $PROJECTS ]]
+            then
+            if [[ ! $line =~ $PROJECTS ]]
+                then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $NOT_PROJECTS ]]
+            then
+            if [[ $line =~ $NOT_PROJECTS ]]
+                then
+                continue
+            fi
+        fi
+
+        if [[ $status = "uncompleted" ]]
+        then
+            message=$(echo $line | extract_message | pretty_message)
+            echo "  • $message"
+        else
+            if [[ ! -z $completed_at && $completed_at < $end_today && $completed_at > $begin_today ]]
+            then
+                message=$(echo $line | extract_message | pretty_message)
+                echo -e "  • $message"
+            fi
+        fi
+    done < $CURRENT_LOG_FILE | sort -g
+
+    echo ""
+    echo "*Yesterday*"
+
+    while read line
+    do
+        if [[ ! $line =~ '@completed' ]]
+        then
+            continue
+        fi
+
+        COMPLETED_AT=$(echo $line | extract_completed_at)
+        COMPLETED_AT=$(date +'%s' --date "$COMPLETED_AT")
+
+        if [[ $COMPLETED_AT -lt $begin_yesterday || $COMPLETED_AT -gt $BEGIN_TODAY ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $TAGS ]]
+            then
+            if [[ ! $line =~ $TAGS ]]
+                then
+                continue
+            fi
+        fi
+
+        message=$(echo $line | extract_message)
+        echo "  • $message"
+    done < $CURRENT_LOG_FILE | sort -g
+}
+
+task_list_usage() {
+    cat <<TXT
+USAGE: task list [OPTIONS]
+
+ALIASES:
+    ls
+
+OPTIONS:
+
+    -h, --help           Output this help message
+    -c, --completed      Only show completed tasks
+    -C, --not-completed  Only show uncompleted tasks
+    -b, --before <DATE>  Only show tasks completed before the DATE
+    -a, --after  <DATE>  Only show tasks completed after the DATE
+TXT
+}
+
+#
+# List log items
+#
+task_list() {
+    local status="all";
+
+    PARAMS=""
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                task_list_usage
+                exit 1
+                ;;
+
+            -c|--completed)
+                status="completed"
+                shift 1
+                ;;
+
+            -C|--not-completed)
+                status="uncompleted"
+                shift 1
+                ;;
+
+            -b|--before)
+                if [[ -z $2 ]]
+                then
+                    echo "--before requires a date of some sort"
+                    exit 1
+                fi
+
+                status="completed"
+                before=$(date +'%s' --date "$2")
+                shift 2
+                ;;
+
+            -a|--after)
+                if [[ -z $2 ]]
+                then
+                    echo "--after requires a date of some sort"
+                    exit 1
+                fi
+
+                status="completed"
+                after=$(date +'%s' --date "$2")
+                shift 2
+                ;;
+
+            *)
+                PARAMS="$PARAMS $1"
+                shift
+                ;;
+        esac
+    done
+
+    while read line
+    do
+        case $status in
+            uncompleted)
+                if [[ $line =~ '@completed' ]]
+                    then
+                    continue
+                fi
+
+                echo $line | pretty_message
+                ;;
+            completed)
+                if [[ ! $line =~ '@completed' ]]
+                    then
+                    continue
+                fi
+
+                completed=$(echo $line | extract_completed_at)
+                completed=$(date +'%s' --date "$completed")
+
+                if [[ ! -z $before ]]
+                then
+                    if [[ $completed -gt $before ]]
+                    then
+                        continue
+                    fi
+                fi
+
+                if [[ ! -z $after ]]
+                then
+                    if [[ $completed -lt $after ]]
+                    then
+                        continue
+                    fi
+                fi
+
+                echo $line | pretty_message
+                ;;
+            *)
+                echo $line | pretty_message
+                ;;
+        esac
+    done < <(cat $CURRENT_LOG_FILE | sort -g)
+}
+
+task_complete_usage() {
+    cat <<TXT
+USAGE: task complete <id>
+
+ALIASES:
+    c
+
+ARGUMENTS:
+    id  The task id
+TXT
+}
+
+#
+# Mark an item as complete
+#
+task_complete() {
+    if [[ -z $1 ]]
+    then
+        task_complete_usage
+        exit 1
+    fi
+
+    ID=$1
+
+    COMPLETED="@completed($NOW)"
+
+    sed -i "s/$ID - \\[ \\] - \(.*\)/$ID - \\[x\\] - \\1 $COMPLETED/g" $CURRENT_LOG_FILE
+}
+
+task_uncomplete_usage() {
+    cat <<TXT
+USAGE: task uncomplete <id>
+
+ALIASES:
+    C
+
+ARGUMENTS:
+    id  The task id
+TXT
+}
+
+remove_completed_tag() {
+    perl -pe 's/\@completed\(.*\)//g'
+}
+
+trim_trailing() {
+    perl -pe 's/\s+$//g'
+}
+
+#
+# Mark a task as incomplete
+#
+task_uncomplete() {
+    if [[ -z $1 ]]
+    then
+        task_uncomplete_usage
+        exit 1
+    fi
+
+    ID=$1
+
+    original=$(rg -m 1 -e "$ID - \\[x\\] - (.*)" --replace '$1' $CURRENT_LOG_FILE)
+
+    sed -i "/\($ID - \\[x\\] - .*\)/d" $CURRENT_LOG_FILE
+
+    original=$(echo $original | remove_completed_tag | trim_trailing)
+    message="$ID - [ ] - $original"
+    echo $message >> $CURRENT_LOG_FILE
+    echo $message
+}
+
+task_remove_usage() {
+    cat <<TXT
+USAGE: task remove <id>
+
+ALIASES:
+    rm
+
+ARGUMENTS:
+    id  The task id
+TXT
+}
+
+#
+# Remove an item from the log
+#
+task_remove() {
+    if [[ -z $1 ]]
+    then
+        task_remove_usage
+        exit 1
+    fi
+
+    ID=$1
+
+    original=$(rg -m 1 -e "$ID - \\[.\\] - (.*)" --replace '$1' $CURRENT_LOG_FILE)
+
+    sed -i "/\($ID - \\[.\\] - .*\)/d" $CURRENT_LOG_FILE
+    echo "Removed $ID - $original"
+}
+
+task_edit_usage() {
+    cat <<TXT
+USAGE: tasks edit <id> [message]
+
+ALIASES:
+    e
+
+ARGUMENTS:
+    id       The task id
+    message  The message to replace the task with
+TXT
+}
+
+#
+# Edit a log item
+#
+# TODO: It still needs to be done
+#
+task_edit() {
+    echo "TODO"
+}
+
+#
+# Repairs / cleans up the log file. Currently this is a pretty basic command
+# that doesn't do much other than just the log file
+#
+task_clean() {
+    ts=$(date +'%s')
+    # Cat out the current log sort it and store it for cleaning
+    cat $CURRENT_LOG_FILE | sort > $CLEANING_LOG_FILE
+    # Remove any empty lines
+    sed -i '/^$/d' $CLEANING_LOG_FILE
+    # BAckup existing log
+    cp $CURRENT_LOG_FILE $TASKS_BACKUP_DIR/$ts.log
+    # Move cleaned log to replace old log
+    mv $CLEANING_LOG_FILE $CURRENT_LOG_FILE
+}
+
+tasks_archive_usage() {
+    cat <<TXT
+USAGE: tasks archive [OPTIONS]
+
+Archives tasks into separate file and removes them from the current logs.
+
+This log file is located at "$TASK_DIRECTORY/archive.log"
+
+OPTIONS
+
+    -t, --tags <TAGS>     A comma separated list of tags to archive.
+    -c, --completed       Archive the completed tasks.
+    -C, --not-completed   Archive the uncompleted tasks.
+    -p, --project <NAME>  Archive the tasks for a given project.
+        --before <DATE>   Archive completed tasks up to the date provided.
+        --on <DATE>       Archive completed tasks on a given date.
+        --id <ID>         Archive a single id. Note: this will override any
+                          other flags specified.
+TXT
+}
+
+tasks_archive() {
+    echo "TODO"
+}
+
+#
+# The usage for log
+#
+task_usage() {
+    cat <<TXT
+USAGE: tasks <COMMAND> [OPTIONS]
+
+All tasks are stored under "$TASKS_DIRECTORY".
+
+If you wish to change this, then set the environment variable
+"TASKS_DIRECTORY" and it will use that.
+
+Tagging a task is done by using the "+tagname"
+
+Making a task apart of a project is done with "#projectname"
+
+Marking a task as completed is done by "@completed(YYYY-MM-DD [HH:MM])"
+
+Marking a task as priority of critical, important, high, or low is done by
+"@<priority name>".
+
+If you make a mistake, you can correct the entry by opening the log file in your
+editor or just using the edit command.
+
+Making a project due sometime is done by "@due(tomorrow)" or "@due(DATE)"
+The format for the DATE field is the same as the unix command "date --date"
+please reference it if you need more information.
+
+COMMAND:
+
+    add | a
+        Add a new task.
+
+    list | ls
+        List all tasks
+
+    remove | rm
+        Delete a task.
+
+    complete | c
+        Mark a task as complete.
+
+    uncomplete | C
+        Mark a completed task as uncomplete
+
+    edit | e
+        Edit a task.
+
+    summary | s
+        Get a summary of all the tasks you did today and yesterday
+
+    clean
+        Clean up the current log file and remove any erroneous entries
+
+    archive
+        Archives a set of tasks into a different file
+TXT
+}
+
+case $1 in
+    add|a)
+        shift
+        task_add $*
+        ;;
+    list|ls)
+        shift
+        task_list $*
+        ;;
+    remove|rm)
+        shift
+        task_remove $*
+        ;;
+    complete|c)
+        shift
+        task_complete $*
+        ;;
+    uncomplete|C)
+        shift;
+        task_uncomplete $*
+        ;;
+    edit|e)
+        shift
+        task_edit $*
+        ;;
+    summary|s)
+        shift
+        task_summary $*
+        ;;
+    clean)
+        shift
+        task_clean $*
+        ;;
+    archive)
+        shift
+        tasks_archive $*
+        ;;
+    *)
+        task_usage
+        exit 0
+        ;;
+esac

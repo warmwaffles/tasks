@@ -113,7 +113,7 @@ extract_message() {
 # Make all the +tags pretty
 #
 pretty_tags() {
-    perl -pe "s/\\+(\\w+)/$COLOR_GREEN+\\1$COLOR_OFF/g"
+    perl -pe "s/\\+([\\w-]+)/$COLOR_GREEN+\\1$COLOR_OFF/g"
 }
 
 #
@@ -134,7 +134,7 @@ pretty_priority() {
 # Make all of the project tags pretty
 #
 pretty_project() {
-    perl -pe "s/(#\w*)/$COLOR_BLUE\\1$COLOR_OFF/g"
+    perl -pe "s/(#[\\w-]+)/$COLOR_BLUE\\1$COLOR_OFF/g"
 }
 
 #
@@ -146,6 +146,14 @@ strip_completed() {
 
 pretty_message() {
     pretty_tags | pretty_completed | pretty_priority | pretty_project
+}
+
+remove_completed_tag() {
+    perl -pe 's/\@completed\(.*\)//g'
+}
+
+trim_trailing() {
+    perl -pe 's/\s+$//g'
 }
 
 task_add_usage() {
@@ -592,14 +600,6 @@ ARGUMENTS:
 TXT
 }
 
-remove_completed_tag() {
-    perl -pe 's/\@completed\(.*\)//g'
-}
-
-trim_trailing() {
-    perl -pe 's/\s+$//g'
-}
-
 #
 # Mark a task as incomplete
 #
@@ -696,7 +696,7 @@ USAGE: tasks archive [OPTIONS]
 
 Archives tasks into separate file and removes them from the current logs.
 
-This log file is located at "$TASK_DIRECTORY/archive.log"
+This log file is located at "$TASKS_DIRECTORY/archive.log"
 
 OPTIONS
 
@@ -712,7 +712,20 @@ TXT
 }
 
 tasks_archive() {
-    echo "TODO"
+    PARAMS=""
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                tasks_archive_usage
+                exit 1
+                ;;
+            *)
+                PARAMS="$PARAMS $1"
+                shift
+                ;;
+        esac
+    done
 }
 
 #

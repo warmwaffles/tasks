@@ -1,0 +1,51 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+usage() {
+    cat <<TXT
+USAGE: tasks archive [OPTIONS]
+
+Archives tasks into separate file and removes them from the current logs.
+
+This log file is located at "$TASKS_DIRECTORY/archive.log"
+
+OPTIONS
+
+    -t, --tags <TAGS>     A comma separated list of tags to archive.
+    -c, --completed       Archive the completed tasks.
+    -C, --not-completed   Archive the uncompleted tasks.
+    -p, --project <NAME>  Archive the tasks for a given project.
+        --before <DATE>   Archive completed tasks up to the date provided.
+        --on <DATE>       Archive completed tasks on a given date.
+        --id <ID>         Archive a single id. Note: this will override any
+                          other flags specified.
+TXT
+}
+
+archive() {
+    PARAMS=""
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 1
+                ;;
+            *)
+                PARAMS="$PARAMS $1"
+                shift
+                ;;
+        esac
+    done
+}
+
+archive $*

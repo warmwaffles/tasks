@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+clean() {
+    # Backup existing log
+    ts=$(date +'%s')
+    cp $TASKS_DIRECTORY/current.log $TASKS_BACKUP_DIR/$ts.log
+
+    # Cat out the current log sort it and store it for cleaning
+    cat $TASKS_DIRECTORY/current.log | sort > $TASKS_DIRECTORY/cleaning.log
+    # Remove any empty lines
+    sed -i '/^$/d' $TASKS_DIRECTORY/cleaning.log
+    # Move cleaned log to replace old log
+    mv $TASKS_DIRECTORY/cleaning.log $TASKS_DIRECTORY/current.log
+}
+
+clean $*

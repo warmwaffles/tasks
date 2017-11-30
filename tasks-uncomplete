@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+remove_completed_tag() {
+    perl -pe 's/\@completed\(.*\)//g'
+}
+
+trim_trailing() {
+    perl -pe 's/\s+$//g'
+}
+
+usage() {
+    cat <<TXT
+USAGE: task uncomplete <id>
+
+ALIASES:
+    C
+
+ARGUMENTS:
+    id  The task id
+TXT
+}
+
+#
+# Mark a task as incomplete
+#
+uncomplete() {
+    if [[ -z $1 ]]
+    then
+        usage
+        exit 1
+    fi
+
+    ID=$1
+
+    original=$(rg -m 1 -e "$ID - \\[x\\] - (.*)" --replace '$1' $TASKS_DIRECTORY/current.log)
+
+    sed -i "/\($ID - \\[x\\] - .*\)/d" $TASKS_DIRECTORY/current.log
+
+    original=$(echo $original | remove_completed_tag | trim_trailing)
+    message="$ID - [ ] - $original"
+    echo $message >> $TASKS_DIRECTORY/current.log
+    echo $message
+}
+
+uncomplete $*

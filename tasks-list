@@ -1,0 +1,216 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+COLOR_OFF='\e[00m'
+COLOR_BLACK='\e[0;30m'
+COLOR_RED='\e[0;31m'
+COLOR_GREEN='\e[0;32m'
+COLOR_YELLOW='\e[0;33m'
+COLOR_BLUE='\e[0;34m'
+COLOR_PURPLE='\e[0;35m'
+COLOR_CYAN='\e[0;36m'
+COLOR_WHITE='\e[0;37m'
+COLOR_BLACK_BOLD='\e[1;30m'
+COLOR_RED_BOLD='\e[1;31m'
+COLOR_GREEN_BOLD='\e[1;32m'
+COLOR_YELLOW_BOLD='\e[1;33m'
+COLOR_BLUE_BOLD='\e[1;34m'
+COLOR_PURPLE_BOLD='\e[1;35m'
+COLOR_CYAN_BOLD='\e[1;36m'
+COLOR_WHITE_BOLD='\e[1;37m'
+
+usage() {
+    cat <<TXT
+USAGE: task list [OPTIONS]
+
+ALIASES:
+    ls
+
+OPTIONS:
+
+    -h, --help           Output this help message
+    -c, --completed      Only show completed tasks
+    -C, --not-completed  Only show uncompleted tasks
+    -b, --before <DATE>  Only show tasks completed before the DATE
+    -a, --after  <DATE>  Only show tasks completed after the DATE
+TXT
+}
+
+join_by() {
+    local IFS="$1";
+    shift;
+    echo "$*";
+}
+
+#
+# Extract the completed at date stamp from the message
+#
+extract_completed_at() {
+    perl -pe 's/.*@completed\((.*)\).*/\1/g'
+}
+
+#
+# Extract the entire message without the ID and leading preamble
+#
+extract_message() {
+    perl -pe 's/\d+ - \[.?\] - (.*)/\1/g'
+}
+
+#
+# Make all the +tags pretty
+#
+pretty_tags() {
+    perl -pe "s/\\+([\\w-]+)/$COLOR_GREEN+\\1$COLOR_OFF/g"
+}
+
+#
+# Make all of the @completed tags pretty
+#
+pretty_completed() {
+    perl -pe "s/@(completed\\(.*\\))/$COLOR_CYAN@\\1$COLOR_OFF/g"
+}
+
+#
+# Make all of the priority tags pretty
+#
+pretty_priority() {
+    perl -pe "s/@(high|low|critical|important)/$COLOR_YELLOW@\\1$COLOR_OFF/g"
+}
+
+#
+# Make all of the project tags pretty
+#
+pretty_project() {
+    perl -pe "s/(#[\\w-]+)/$COLOR_BLUE\\1$COLOR_OFF/g"
+}
+
+#
+# Remove the completed tag from a string
+#
+strip_completed() {
+    perl -pe 's/\@completed\(.*\)//g'
+}
+
+pretty_message() {
+    pretty_tags | pretty_completed | pretty_priority | pretty_project
+}
+
+remove_completed_tag() {
+    perl -pe 's/\@completed\(.*\)//g'
+}
+
+trim_trailing() {
+    perl -pe 's/\s+$//g'
+}
+
+#
+# List log items
+#
+list() {
+    local status="all";
+
+    PARAMS=""
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 1
+                ;;
+
+            -c|--completed)
+                status="completed"
+                shift 1
+                ;;
+
+            -C|--not-completed)
+                status="uncompleted"
+                shift 1
+                ;;
+
+            -b|--before)
+                if [[ -z $2 ]]
+                then
+                    echo "--before requires a date of some sort"
+                    exit 1
+                fi
+
+                status="completed"
+                before=$(date +'%s' --date "$2")
+                shift 2
+                ;;
+
+            -a|--after)
+                if [[ -z $2 ]]
+                then
+                    echo "--after requires a date of some sort"
+                    exit 1
+                fi
+
+                status="completed"
+                after=$(date +'%s' --date "$2")
+                shift 2
+                ;;
+
+            *)
+                PARAMS="$PARAMS $1"
+                shift
+                ;;
+        esac
+    done
+
+    while read line
+    do
+        case $status in
+            uncompleted)
+                if [[ $line =~ '@completed' ]]
+                    then
+                    continue
+                fi
+
+                echo $line | pretty_message
+                ;;
+            completed)
+                if [[ ! $line =~ '@completed' ]]
+                    then
+                    continue
+                fi
+
+                completed=$(echo $line | extract_completed_at)
+                completed=$(date +'%s' --date "$completed")
+
+                if [[ ! -z $before ]]
+                then
+                    if [[ $completed -gt $before ]]
+                    then
+                        continue
+                    fi
+                fi
+
+                if [[ ! -z $after ]]
+                then
+                    if [[ $completed -lt $after ]]
+                    then
+                        continue
+                    fi
+                fi
+
+                echo $line | pretty_message
+                ;;
+            *)
+                echo $line | pretty_message
+                ;;
+        esac
+    done < <(cat $TASKS_DIRECTORY/current.log | sort -g)
+}
+
+list $*

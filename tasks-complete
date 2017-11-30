@@ -1,0 +1,42 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+usage() {
+    cat <<TXT
+USAGE: tasks complete <id>
+
+ALIASES:
+    c
+
+ARGUMENTS:
+    id  The task id
+TXT
+}
+
+#
+# Mark an item as complete
+#
+complete() {
+    if [[ -z $1 ]]
+    then
+        usage
+        exit 1
+    fi
+
+    ID=$1
+
+    COMPLETED="@completed($NOW)"
+
+    sed -i "s/$ID - \\[ \\] - \(.*\)/$ID - \\[x\\] - \\1 $COMPLETED/g" $TASKS_DIRECTORY/current.log
+}
+
+complete $*

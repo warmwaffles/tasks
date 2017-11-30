@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+usage() {
+    cat <<TXT
+USAGE: tasks edit <id> [message]
+
+ALIASES:
+    e
+
+ARGUMENTS:
+    id       The task id
+    message  The message to replace the task with
+TXT
+}
+
+#
+# Edit a log item
+#
+# TODO: It still needs to be done
+#
+edit() {
+    echo "TODO"
+}
+
+edit $*

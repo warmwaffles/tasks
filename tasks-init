@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+
+# Setup the tasks directory if it hasn't been yet
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+    mkdir -p $TASKS_DIRECTORY/backups
+fi
+
+if [[ ! -f $TASKS_DIRECTORY/.gitignore ]]
+then
+    # Prepare the directory for git incase the user wants to back it up
+    echo "/backups" > $TASKS_DIRECTORY/.gitignore
+    echo "log.vacuum" >> $TASKS_DIRECTORY/.gitignore
+fi
+
+# Check to ensure our counter is still present
+if [[ ! -f $TASKS_DIRECTORY/taskid ]]
+then
+    echo "0" > $TASKS_DIRECTORY/taskid
+fi
+
+# Check to make sure the log files are present
+if [[ ! -f $TASKS_DIRECTORY/current.log ]]
+then
+    touch $TASKS_DIRECTORY/current.log
+fi
+
+if [[ ! -f $TASKS_DIRECTORY/archive.log ]]
+then
+    touch $TASKS_DIRECTORY/archive.log
+fi

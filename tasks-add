@@ -1,0 +1,97 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+usage() {
+    cat <<TXT
+USAGE: tasks add [OPTIONS]
+
+ALIASES:
+    a
+
+OPTIONS:
+
+    -h, --help       Output this help message
+    -c, --completed  Mark this task as completed
+        --id         Provide the id to assign the task. Useful if you deleted
+                     a task and want to readd it later. Note, we will not try
+                     to validate the uniqueness of the id. It is up to you to
+                     make it uniq.
+TXT
+}
+
+task_increment_id() {
+    if [[ ! -f $TASKS_DIRECTORY/taskid ]]
+    then
+        echo "0" > $TASKS_DIRECTORY/taskid
+    fi
+
+    ID=$(cat $TASKS_DIRECTORY/taskid)
+    ID=$((ID + 1))
+    echo "$ID" > $TASKS_DIRECTORY/taskid
+    echo "$ID"
+}
+
+add() {
+    PARAMS=""
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 1
+                ;;
+
+            -c|--completed)
+                shift
+                COMPLETED="@completed($NOW)"
+                ;;
+
+            --id)
+                if [[ -z $2 ]]
+                then
+                    echo "--id requires an ID to be passed"
+                    exit 1
+                fi
+
+                ID=$2
+                shift 2
+                ;;
+            *)
+                PARAMS="$PARAMS $1"
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z $PARAMS ]]
+    then
+        usage
+        exit 1
+    fi
+
+    if [[ -z $ID ]]
+    then
+        ID=$(task_increment_id)
+    fi
+
+    if [[ -z $COMPLETED ]]
+    then
+        MESSAGE="$ID - [ ] - $PARAMS"
+    else
+        MESSAGE="$ID - [x] - $PARAMS $COMPLETED"
+    fi
+
+    echo $MESSAGE >> $TASKS_DIRECTORY/current.log
+    echo $MESSAGE
+}
+
+add $*

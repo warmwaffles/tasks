@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+usage() {
+    cat <<TXT
+USAGE: task remove <id>
+
+ALIASES:
+    rm
+
+ARGUMENTS:
+    id  The task id
+TXT
+}
+
+#
+# Remove an item from the log
+#
+remove() {
+    if [[ -z $1 ]]
+    then
+        usage
+        exit 1
+    fi
+
+    ID=$1
+
+    original=$(rg -m 1 -e "$ID - \\[.\\] - (.*)" --replace '$1' $TASKS_DIRECTORY/current.log)
+
+    sed -i "/\($ID - \\[.\\] - .*\)/d" $TASKS_DIRECTORY/current.log
+    echo "Removed $ID - $original"
+}
+
+remove $*

@@ -10,6 +10,14 @@ then
     mkdir -p $TASKS_DIRECTORY
 fi
 
+if [[ ! -f $TASKS_DIRECTORY/org ]]
+then
+    echo "default" > $TASKS_DIRECTORY/org
+fi
+
+ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
+export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
+
 COLOR_OFF='\e[00m'
 COLOR_BLACK='\e[0;30m'
 COLOR_RED='\e[0;31m'

@@ -30,7 +30,7 @@ COMMAND:
     add | a
         Add a new task.
 
-    list | ls
+    list | ls | l
         List all tasks
 
     remove | rm
@@ -53,6 +53,9 @@ COMMAND:
 
     archive
         Archives a set of tasks into a different file
+
+    use
+        Change which organization you are using
 TXT
 }
 
@@ -61,7 +64,7 @@ case $1 in
         shift
         tasks-add $*
         ;;
-    list|ls)
+    list|ls|l)
         shift
         tasks-list $*
         ;;
@@ -92,6 +95,10 @@ case $1 in
     archive)
         shift
         tasks-archive $*
+        ;;
+    use)
+        shift
+        tasks-use $*
         ;;
     *)
         usage $*

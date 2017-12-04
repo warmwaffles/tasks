@@ -10,10 +10,13 @@ then
     mkdir -p $TASKS_DIRECTORY
 fi
 
-if [[ ! -f $TASKS_DIRECTORY/deleted.log ]]
+if [[ ! -f $TASKS_DIRECTORY/org ]]
 then
-    touch $TASKS_DIRECTORY/deleted.log
+    echo "default" > $TASKS_DIRECTORY/org
 fi
+
+ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
+export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
 
 usage() {
     cat <<TXT

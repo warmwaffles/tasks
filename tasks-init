@@ -39,3 +39,11 @@ if [[ ! -f $TASKS_DIRECTORY/deleted.log ]]
 then
     touch $TASKS_DIRECTORY/deleted.log
 fi
+
+if [[ ! -f $TASKS_DIRECTORY/org ]]
+then
+    echo "default" > $TASKS_DIRECTORY/org
+fi
+
+ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
+export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"

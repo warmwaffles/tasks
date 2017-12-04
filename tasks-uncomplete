@@ -10,6 +10,14 @@ then
     mkdir -p $TASKS_DIRECTORY
 fi
 
+if [[ ! -f $TASKS_DIRECTORY/org ]]
+then
+    echo "default" > $TASKS_DIRECTORY/org
+fi
+
+ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
+export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
+
 remove_completed_tag() {
     perl -pe 's/\@completed\(.*\)//g'
 }

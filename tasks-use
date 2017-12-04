@@ -1,0 +1,63 @@
+#!/bin/bash
+
+set -e
+
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+if [[ -f $TASKS_DIRECTORY/org ]]
+then
+    CURRENT_ORG=$(cat $TASKS_DIRECTORY/org)
+else
+    CURRENT_ORG="default"
+    echo "default" > $TASKS_DIRECTORY/org
+fi
+
+usage() {
+    cat <<TXT
+USAGE: tasks use <name>
+
+Changes which task list to use. Useful if you want to keep your personal
+projects separate from your work projects.
+
+ARGUMENTS:
+    name  The name of the sub category of tasks
+TXT
+}
+
+use() {
+    params=()
+
+    while (( "$#" )); do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 1
+                ;;
+            *)
+                params+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z ${params[0]} ]]
+    then
+        usage
+        exit 1
+    fi
+
+    changeto="${params[0]}"
+
+    echo "Switching from $CURRENT_ORG to $changeto"
+    echo "$changeto" > $TASKS_DIRECTORY/org
+
+    rm $TASKS_DIRECTORY/current
+    ln -s $TASKS_DIRECTORY/$changeto $TASKS_DIRECTORY/current
+}
+
+use $*

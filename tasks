@@ -1,5 +1,18 @@
 #!/bin/bash
 
+TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+NOW=$(date +"%F %R")
+
+if [[ ! -f $TASKS_DIRECTORY ]]
+then
+    mkdir -p $TASKS_DIRECTORY
+fi
+
+if [[ ! -f $TASKS_DIRECTORY/org ]]
+then
+    echo "default" > $TASKS_DIRECTORY/org
+fi
+
 usage() {
     cat <<TXT
 USAGE: tasks <COMMAND> [OPTIONS]
@@ -56,6 +69,9 @@ COMMAND:
 
     use
         Change which organization you are using
+
+    which
+        Display what organization you are currently using
 TXT
 }
 
@@ -99,6 +115,10 @@ case $1 in
     use)
         shift
         tasks-use $*
+        ;;
+    which)
+        shift
+        cat $TASKS_DIRECTORY/org
         ;;
     *)
         usage $*

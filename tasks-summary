@@ -106,14 +106,6 @@ pretty_message() {
     pretty_tags | pretty_completed | pretty_priority | pretty_project
 }
 
-remove_completed_tag() {
-    perl -pe 's/\@completed\(.*\)//g'
-}
-
-trim_trailing() {
-    perl -pe 's/\s+$//g'
-}
-
 #
 # Get a summary of the work you did / plan on doing today and yesterday
 #
@@ -189,64 +181,6 @@ summary() {
     end_today=$(date +'%s' --date "23:59 today")
     begin_yesterday=$(date +'%s' --date "00:00 yesterday")
 
-    echo "*Today*"
-
-    while read line
-    do
-        status="uncompleted"
-        if [[ $line =~ '@completed' ]]
-        then
-            completed_at=$(echo $line | extract_completed_at)
-            completed_at=$(date +'%s' --date "$completed_at")
-            status="completed"
-        fi
-
-        if [[ ! -z $TAGS ]]
-        then
-            if [[ ! $line =~ $TAGS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $NOT_TAGS ]]
-        then
-            if [[ $line =~ $NOT_TAGS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $PROJECTS ]]
-        then
-            if [[ ! $line =~ $PROJECTS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $NOT_PROJECTS ]]
-        then
-            if [[ $line =~ $NOT_PROJECTS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ $status = "uncompleted" ]]
-        then
-            message=$(echo $line | extract_message | pretty_message)
-            echo "  • $message"
-        else
-            if [[ ! -z $completed_at && $completed_at < $end_today && $completed_at > $begin_today ]]
-            then
-                message=$(echo $line | extract_message | strip_completed | pretty_message)
-                echo -e "  • $message"
-            fi
-        fi
-    done < $TASKS_DIRECTORY/current.log | sort -g
-
-    echo ""
     echo "*Yesterday*"
 
     while read line
@@ -311,6 +245,64 @@ summary() {
 
         message=$(echo $line | extract_message | strip_completed | pretty_message)
         echo "  • $message"
+    done < $TASKS_DIRECTORY/current.log | sort -g
+
+    echo ""
+    echo "*Today*"
+
+    while read line
+    do
+        status="uncompleted"
+        if [[ $line =~ '@completed' ]]
+        then
+            completed_at=$(echo $line | extract_completed_at)
+            completed_at=$(date +'%s' --date "$completed_at")
+            status="completed"
+        fi
+
+        if [[ ! -z $TAGS ]]
+        then
+            if [[ ! $line =~ $TAGS ]]
+            then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $NOT_TAGS ]]
+        then
+            if [[ $line =~ $NOT_TAGS ]]
+            then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $PROJECTS ]]
+        then
+            if [[ ! $line =~ $PROJECTS ]]
+            then
+                continue
+            fi
+        fi
+
+        if [[ ! -z $NOT_PROJECTS ]]
+        then
+            if [[ $line =~ $NOT_PROJECTS ]]
+            then
+                continue
+            fi
+        fi
+
+        if [[ $status = "uncompleted" ]]
+        then
+            message=$(echo $line | extract_message | pretty_message)
+            echo "  • $message"
+        else
+            if [[ ! -z $completed_at && $completed_at < $end_today && $completed_at > $begin_today ]]
+            then
+                message=$(echo $line | extract_message | strip_completed | pretty_message)
+                echo -e "  • $message"
+            fi
+        fi
     done < $TASKS_DIRECTORY/current.log | sort -g
 }
 

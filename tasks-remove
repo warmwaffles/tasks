@@ -10,6 +10,11 @@ then
     mkdir -p $TASKS_DIRECTORY
 fi
 
+if [[ ! -f $TASKS_DIRECTORY/deleted.log ]]
+then
+    touch $TASKS_DIRECTORY/deleted.log
+fi
+
 usage() {
     cat <<TXT
 USAGE: task remove <id>
@@ -32,12 +37,12 @@ remove() {
         exit 1
     fi
 
-    ID=$1
+    local id=$1
+    local original=$(rg -m 1 -e "$id - \\[.\\] - .*" $TASKS_DIRECTORY/current.log)
 
-    original=$(rg -m 1 -e "$ID - \\[.\\] - (.*)" --replace '$1' $TASKS_DIRECTORY/current.log)
-
-    sed -i "/\($ID - \\[.\\] - .*\)/d" $TASKS_DIRECTORY/current.log
-    echo "Removed $ID - $original"
+    echo "$original" >> $TASKS_DIRECTORY/deleted.log
+    sed -i "/\($id - \\[.\\] - .*\)/d" $TASKS_DIRECTORY/current.log
+    echo "Removed $id"
 }
 
 remove $*

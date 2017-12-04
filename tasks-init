@@ -30,7 +30,12 @@ then
     touch $TASKS_DIRECTORY/current.log
 fi
 
-if [[ ! -f $TASKS_DIRECTORY/archive.log ]]
+if [[ ! -f $TASKS_DIRECTORY/archived.log ]]
 then
-    touch $TASKS_DIRECTORY/archive.log
+    touch $TASKS_DIRECTORY/archived.log
+fi
+
+if [[ ! -f $TASKS_DIRECTORY/deleted.log ]]
+then
+    touch $TASKS_DIRECTORY/deleted.log
 fi

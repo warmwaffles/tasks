@@ -28,6 +28,9 @@ COLOR_PURPLE_BOLD='\e[1;35m'
 COLOR_CYAN_BOLD='\e[1;36m'
 COLOR_WHITE_BOLD='\e[1;37m'
 
+YES=0
+NO=1
+
 usage() {
     cat <<TXT
 USAGE: tasks summary [OPTIONS]
@@ -35,15 +38,20 @@ USAGE: tasks summary [OPTIONS]
 ALIASES:
     s
 
-Prints out a summary of todays tasks and yesterday's completed tasks.
+Prints out a summary of tasks. The default summary is a daily output. You may
+specify a weekly or monthly output if desired.
 
 OPTIONS:
 
-    -h, --help                 Output this help message
-    -t, --tags <TAGS>          Only show tasks with the specific tags
-    -T, --not-tags <TAGS>      Exclude tasks with the specific tags
-    -p, --project <NAMES>      Only show the tasks for the specific projects
-    -P, --not-project <NAMES>  Exclude tasks for specific projects
+    -h, --help                 Output this help message.
+    -t, --tags <TAGS>          Only show tasks with the specific tags.
+    -T, --not-tags <TAGS>      Exclude tasks with the specific tags.
+    -p, --project <NAMES>      Only show the tasks for the specific projects.
+    -P, --not-project <NAMES>  Exclude tasks for specific projects.
+        --daily                Output tasks in daily standup format today and
+                               yesterday.
+        --weekly               Output tasks in a weekly overview format.
+        --monthly              Output tasks in a monthly overview format.
 TXT
 }
 
@@ -106,11 +114,231 @@ pretty_message() {
     pretty_tags | pretty_completed | pretty_priority | pretty_project
 }
 
+contains() {
+    if [[ "$1" =~ "$2" ]]
+    then
+        return $YES
+    fi
+
+    return $NO
+}
+
+daily_summary() {
+    local begin_today=$(date +'%s' --date "00:00 today")
+    local end_today=$(date +'%s' --date "23:59 today")
+    local begin_yesterday=$(date +'%s' --date "00:00 yesterday")
+    local completed_at=""
+
+    readarray -t items < $TASKS_DIRECTORY/current.log
+
+    echo "*Yesterday*"
+
+    for item in "${items[@]}"
+    do
+        item="$item"
+        if [[ ! $item =~ '@completed' ]]
+        then
+            continue
+        fi
+
+        completed_at=$(echo "$item" | extract_completed_at)
+        completed_at=$(date +'%s' --date "$completed_at")
+
+        if [[ $completed_at -lt $begin_yesterday ]]
+        then
+            continue
+        fi
+
+        if [[ $completed_at -gt $begin_today ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $tags ]] && [[ ! $item =~ $tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_tags ]] && [[ $item =~ $not_tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $projects ]] && [[ ! $item =~ $projects ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_projects ]] && [[ $item =~ $not_projects ]]
+        then
+            continue
+        fi
+
+        message=$(echo $item | extract_message | strip_completed | pretty_message)
+        echo "  • $message"
+    done
+
+
+    echo ""
+    echo "*Today*"
+
+    for item in "${items[@]}"
+    do
+        item="$item"
+        status="uncompleted"
+        if [[ $item =~ '@completed' ]]
+        then
+            completed_at=$(echo "$item" | extract_completed_at)
+            completed_at=$(date +'%s' --date "$completed_at")
+            status="completed"
+        fi
+
+        if [[ ! -z $tags ]] && [[ ! $item =~ $tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_tags ]] && [[ $item =~ $not_tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $projects ]] && [[ ! $item =~ $projects ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_projects ]] && [[ $item =~ $not_projects ]]
+        then
+            continue
+        fi
+
+        if [[ $status = "uncompleted" ]]
+        then
+            message=$(echo $item | extract_message | pretty_message)
+            echo "  • $message"
+            continue
+        fi
+
+        if [[ ! -z $completed_at ]] && [[ $completed_at < $end_today && $completed_at > $begin_today ]]
+        then
+            message=$(echo $item | extract_message | strip_completed | pretty_message)
+            echo -e "  • $message"
+        fi
+    done
+}
+
+weekly_summary() {
+    local begin_last_week=$(date +'%s' --date "00:00 7 days ago")
+    local begin_today=$(date +'%s' --date "00:00 today")
+    local end_of_week=$(date +'%s' --date "00:00 7 days")
+    local completed_at=""
+
+    readarray -t items < $TASKS_DIRECTORY/current.log
+
+    echo "*Last Week*"
+
+    for item in "${items[@]}"
+    do
+        item="$item"
+        if [[ ! $item =~ '@completed' ]]
+        then
+            continue
+        fi
+
+        completed_at=$(echo "$item" | extract_completed_at)
+        completed_at=$(date +'%s' --date "$completed_at")
+
+        if [[ $completed_at -lt $begin_last_week ]]
+        then
+            continue
+        fi
+
+        if [[ $completed_at -gt $begin_today ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $tags ]] && [[ ! $item =~ $tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_tags ]] && [[ $item =~ $not_tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $projects ]] && [[ ! $item =~ $projects ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_projects ]] && [[ $item =~ $not_projects ]]
+        then
+            continue
+        fi
+
+        message=$(echo $item | extract_message | strip_completed | pretty_message)
+        echo "  • $message"
+    done
+
+
+    echo ""
+    echo "*This Week*"
+
+    for item in "${items[@]}"
+    do
+        item="$item"
+        status="uncompleted"
+        if [[ $item =~ '@completed' ]]
+        then
+            completed_at=$(echo "$item" | extract_completed_at)
+            completed_at=$(date +'%s' --date "$completed_at")
+            status="completed"
+        fi
+
+        if [[ ! -z $tags ]] && [[ ! $item =~ $tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_tags ]] && [[ $item =~ $not_tags ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $projects ]] && [[ ! $item =~ $projects ]]
+        then
+            continue
+        fi
+
+        if [[ ! -z $not_projects ]] && [[ $item =~ $not_projects ]]
+        then
+            continue
+        fi
+
+        if [[ $status = "uncompleted" ]]
+        then
+            message=$(echo $item | extract_message | pretty_message)
+            echo "  • $message"
+            continue
+        fi
+
+        if [[ ! -z $completed_at ]] && [[ $completed_at < $end_of_week && $completed_at > $begin_today ]]
+        then
+            message=$(echo $item | extract_message | strip_completed | pretty_message)
+            echo -e "  • $message"
+        fi
+    done
+}
+
 #
 # Get a summary of the work you did / plan on doing today and yesterday
 #
 summary() {
-    PARAMS=""
+    params=""
+    format="daily"
 
     while (( "$#" )); do
         case "$1" in
@@ -126,9 +354,9 @@ summary() {
                     exit 1
                 fi
 
-                TAGS=(${2//,/ })
-                TAGS=$(join_by '|' ${TAGS[@]})
-                TAGS="\\+($TAGS)"
+                tags=(${2//,/ })
+                tags=$(join_by '|' ${tags[@]})
+                tags="\\+($tags)"
                 shift 2
                 ;;
 
@@ -139,9 +367,9 @@ summary() {
                     exit 1
                 fi
 
-                NOT_TAGS=(${2//,/ })
-                NOT_TAGS=$(join_by '|' ${NOT_TAGS[@]})
-                NOT_TAGS="\\+($NOT_TAGS)"
+                not_tags=(${2//,/ })
+                not_tags=$(join_by '|' ${not_tags[@]})
+                not_tags="\\+($not_tags)"
                 shift 2
                 ;;
 
@@ -152,9 +380,9 @@ summary() {
                     exit 1
                 fi
 
-                PROJECTS=(${2//,/ })
-                PROJECTS=$(join_by '|' ${PROJECTS[@]})
-                PROJECTS="#($PROJECTS)"
+                projects=(${2//,/ })
+                projects=$(join_by '|' ${projects[@]})
+                projects="#($projects)"
                 shift 2
                 ;;
 
@@ -165,145 +393,41 @@ summary() {
                     exit 1
                 fi
 
-                NOT_PROJECTS=(${2//,/ })
-                NOT_PROJECTS=$(join_by '|' ${NOT_PROJECTS[@]})
-                NOT_PROJECTS="#($NOT_PROJECTS)"
+                not_projects=(${2//,/ })
+                not_projects=$(join_by '|' ${not_projects[@]})
+                not_projects="#($not_projects)"
                 shift 2
                 ;;
+            --daily)
+                shift
+                format="daily"
+                ;;
+            --weekly)
+                shift
+                format="weekly"
+                ;;
+            --monthly)
+                shift
+                format="monthly"
+                ;;
             *)
-                PARAMS="$PARAMS $1"
+                params="$params $1"
                 shift
                 ;;
         esac
     done
 
-    begin_today=$(date +'%s' --date "00:00 today")
-    end_today=$(date +'%s' --date "23:59 today")
-    begin_yesterday=$(date +'%s' --date "00:00 yesterday")
-
-    echo "*Yesterday*"
-
-    while read line
-    do
-        if [[ ! $line =~ '@completed' ]]
-        then
-            continue
-        fi
-
-        COMPLETED_AT=$(echo $line | extract_completed_at)
-        COMPLETED_AT=$(date +'%s' --date "$COMPLETED_AT")
-
-        if [[ $COMPLETED_AT -lt $begin_yesterday ]]
-        then
-            continue
-        fi
-
-        if [[ $COMPLETED_AT -gt $begin_today ]]
-        then
-            continue
-        fi
-
-        if [[ ! -z $TAGS ]]
-        then
-            if [[ ! $line =~ $TAGS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $NOT_TAGS ]]
-        then
-            if [[ $line =~ $NOT_TAGS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $PROJECTS ]]
-        then
-            if [[ ! $line =~ $PROJECTS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $NOT_PROJECTS ]]
-        then
-            if [[ $line =~ $NOT_PROJECTS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $TAGS ]]
-        then
-            if [[ ! $line =~ $TAGS ]]
-            then
-                continue
-            fi
-        fi
-
-        message=$(echo $line | extract_message | strip_completed | pretty_message)
-        echo "  • $message"
-    done < $TASKS_DIRECTORY/current.log | sort -g
-
-    echo ""
-    echo "*Today*"
-
-    while read line
-    do
-        status="uncompleted"
-        if [[ $line =~ '@completed' ]]
-        then
-            completed_at=$(echo $line | extract_completed_at)
-            completed_at=$(date +'%s' --date "$completed_at")
-            status="completed"
-        fi
-
-        if [[ ! -z $TAGS ]]
-        then
-            if [[ ! $line =~ $TAGS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $NOT_TAGS ]]
-        then
-            if [[ $line =~ $NOT_TAGS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $PROJECTS ]]
-        then
-            if [[ ! $line =~ $PROJECTS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ ! -z $NOT_PROJECTS ]]
-        then
-            if [[ $line =~ $NOT_PROJECTS ]]
-            then
-                continue
-            fi
-        fi
-
-        if [[ $status = "uncompleted" ]]
-        then
-            message=$(echo $line | extract_message | pretty_message)
-            echo "  • $message"
-        else
-            if [[ ! -z $completed_at && $completed_at < $end_today && $completed_at > $begin_today ]]
-            then
-                message=$(echo $line | extract_message | strip_completed | pretty_message)
-                echo -e "  • $message"
-            fi
-        fi
-    done < $TASKS_DIRECTORY/current.log | sort -g
+    case $format in
+        daily)
+            daily_summary
+            ;;
+        weekly)
+            weekly_summary
+            ;;
+        *)
+            echo "unknown format type $format"
+            ;;
+    esac
 }
 
 summary $*

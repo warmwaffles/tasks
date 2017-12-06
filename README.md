@@ -35,7 +35,19 @@ markups added.
 
 ## Installing
 
-Just copy the `tasks` script somewhere on your path.
+Copy the files somewhere on your path. Alternatively, clone the repo and add the
+repo to your `$PATH`.
+
+```sh
+cp tasks* ~/bin
+```
+
+or
+
+```sh
+git clone git@github.com:warmwaffles/tasks.git /usr/local/src/tasks
+export PATH="/usr/local/src/tasks:$PATH"
+```
 
 ## Switching Organizations
 

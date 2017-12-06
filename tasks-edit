@@ -2,21 +2,7 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
-NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
+DIRECTORY=$(tasks-home)/$(tasks-which)
 
 usage() {
     cat <<TXT

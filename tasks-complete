@@ -2,21 +2,8 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+DIRECTORY=$(tasks-home)/$(tasks-which)
 NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
 
 usage() {
     cat <<TXT
@@ -44,7 +31,7 @@ complete() {
 
     COMPLETED="@completed($NOW)"
 
-    sed -i "s/$ID - \\[ \\] - \(.*\)/$ID - \\[x\\] - \\1 $COMPLETED/g" $TASKS_DIRECTORY/current.log
+    sed -i "s/$ID - \\[ \\] - \(.*\)/$ID - \\[x\\] - \\1 $COMPLETED/g" $DIRECTORY/current.log
 }
 
 complete $*

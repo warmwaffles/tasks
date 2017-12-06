@@ -2,21 +2,14 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+DIRECTORY=$(tasks-home)/$(tasks-which)
+
+if [[ ! -f $DIRECTORY/current.log ]]
+then
+    touch $DIRECTORY/current.log
+fi
+
 NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
 
 remove_completed_tag() {
     perl -pe 's/\@completed\(.*\)//g'
@@ -50,13 +43,13 @@ uncomplete() {
 
     ID=$1
 
-    original=$(rg -m 1 -e "$ID - \\[x\\] - (.*)" --replace '$1' $TASKS_DIRECTORY/current.log)
+    original=$(rg -m 1 -e "$ID - \\[x\\] - (.*)" --replace '$1' $DIRECTORY/current.log)
 
-    sed -i "/\($ID - \\[x\\] - .*\)/d" $TASKS_DIRECTORY/current.log
+    sed -i "/\($ID - \\[x\\] - .*\)/d" $DIRECTORY/current.log
 
     original=$(echo $original | remove_completed_tag | trim_trailing)
     message="$ID - [ ] - $original"
-    echo $message >> $TASKS_DIRECTORY/current.log
+    echo $message >> $DIRECTORY/current.log
     echo $message
 }
 

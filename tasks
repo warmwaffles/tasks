@@ -1,23 +1,14 @@
 #!/bin/bash
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
-NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
+set -e
 
 usage() {
     cat <<TXT
 USAGE: tasks <COMMAND> [OPTIONS]
 
-All tasks are stored under "$TASKS_DIRECTORY".
+All tasks are stored under:
+
+    $(tasks-home)
 
 If you wish to change this, then set the environment variable
 "TASKS_DIRECTORY" and it will use that.
@@ -118,7 +109,11 @@ case $1 in
         ;;
     which)
         shift
-        cat $TASKS_DIRECTORY/org
+        tasks-which $*
+        ;;
+    home)
+        shift
+        tasks-home $*
         ;;
     *)
         usage $*

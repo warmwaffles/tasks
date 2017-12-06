@@ -2,21 +2,7 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
-NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
+DIRECTORY=$(tasks-home)/$(tasks-which)
 
 usage() {
     cat <<TXT
@@ -24,7 +10,7 @@ USAGE: tasks archive [OPTIONS]
 
 Archives tasks into separate file and removes them from the current logs.
 
-This log file is located at "$TASKS_DIRECTORY/archive.log"
+This log file is located at "$DIRECTORY/archive.log"
 
 OPTIONS
 
@@ -40,7 +26,7 @@ TXT
 }
 
 archive() {
-    PARAMS=""
+    local params=""
 
     while (( "$#" )); do
         case "$1" in
@@ -49,7 +35,7 @@ archive() {
                 exit 1
                 ;;
             *)
-                PARAMS="$PARAMS $1"
+                params="$params $1"
                 shift
                 ;;
         esac

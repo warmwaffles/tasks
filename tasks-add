@@ -2,21 +2,8 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+DIRECTORY=$(tasks-home)/$(tasks-which)
 NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
 
 usage() {
     cat <<TXT
@@ -29,22 +16,22 @@ OPTIONS:
 
     -h, --help       Output this help message
     -c, --completed  Mark this task as completed
-        --id         Provide the id to assign the task. Useful if you deleted
+        --id <ID>    Provide the id to assign the task. Useful if you deleted
                      a task and want to readd it later. Note, we will not try
                      to validate the uniqueness of the id. It is up to you to
                      make it uniq.
 TXT
 }
 
-task_increment_id() {
-    if [[ ! -f $TASKS_DIRECTORY/taskid ]]
+increment_id() {
+    if [[ ! -f $DIRECTORY/taskid ]]
     then
-        echo "0" > $TASKS_DIRECTORY/taskid
+        echo "0" > $DIRECTORY/taskid
     fi
 
-    ID=$(cat $TASKS_DIRECTORY/taskid)
+    ID=$(cat $DIRECTORY/taskid)
     ID=$((ID + 1))
-    echo "$ID" > $TASKS_DIRECTORY/taskid
+    echo "$ID" > $DIRECTORY/taskid
     echo "$ID"
 }
 
@@ -88,7 +75,7 @@ add() {
 
     if [[ -z $ID ]]
     then
-        ID=$(task_increment_id)
+        ID=$(increment_id)
     fi
 
     if [[ -z $COMPLETED ]]
@@ -98,7 +85,7 @@ add() {
         MESSAGE="$ID - [x] - $PARAMS $COMPLETED"
     fi
 
-    echo $MESSAGE >> $TASKS_DIRECTORY/current.log
+    echo $MESSAGE >> $DIRECTORY/current.log
     echo $MESSAGE
 }
 

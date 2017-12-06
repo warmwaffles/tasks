@@ -2,26 +2,7 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
-NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
-
-if [[ ! -f $TASKS_DIRECTORY/backups ]]
-then
-    mkdir -p $TASKS_DIRECTORY/backups
-fi
+DIRECTORY=$(tasks-home)/$(tasks-which)
 
 usage() {
     cat <<TXT
@@ -32,7 +13,7 @@ TXT
 }
 
 clean() {
-    PARAMS=""
+    local params=""
 
     while (( "$#" )); do
         case "$1" in
@@ -42,31 +23,31 @@ clean() {
                 ;;
 
             *)
-                PARAMS="$PARAMS $1"
+                params="$params $1"
                 shift
                 ;;
         esac
     done
 
-    ts=$(date +'%s')
+    local timestamp=$(date +'%s')
 
     # CURRENT
-    cp $TASKS_DIRECTORY/current.log $TASKS_DIRECTORY/backups/current.$ts.log
-    cat $TASKS_DIRECTORY/current.log | sort -V > $TASKS_DIRECTORY/cleaning.log
-    sed -i '/^$/d' $TASKS_DIRECTORY/cleaning.log
-    mv $TASKS_DIRECTORY/cleaning.log $TASKS_DIRECTORY/current.log
+    cp $DIRECTORY/current.log $DIRECTORY/backups/current.$timestamp.log
+    cat $DIRECTORY/current.log | sort -V > $DIRECTORY/cleaning.log
+    sed -i '/^$/d' $DIRECTORY/cleaning.log
+    mv $DIRECTORY/cleaning.log $DIRECTORY/current.log
 
     # ARCHIVED
-    cp $TASKS_DIRECTORY/archived.log $TASKS_DIRECTORY/backups/archived.$ts.log
-    cat $TASKS_DIRECTORY/archived.log | sort -V > $TASKS_DIRECTORY/cleaning.log
-    sed -i '/^$/d' $TASKS_DIRECTORY/cleaning.log
-    mv $TASKS_DIRECTORY/cleaning.log $TASKS_DIRECTORY/archived.log
+    cp $DIRECTORY/archived.log $DIRECTORY/backups/archived.$timestamp.log
+    cat $DIRECTORY/archived.log | sort -V > $DIRECTORY/cleaning.log
+    sed -i '/^$/d' $DIRECTORY/cleaning.log
+    mv $DIRECTORY/cleaning.log $DIRECTORY/archived.log
 
     # DELETED
-    cp $TASKS_DIRECTORY/deleted.log $TASKS_DIRECTORY/backups/deleted.$ts.log
-    cat $TASKS_DIRECTORY/deleted.log | sort -V > $TASKS_DIRECTORY/cleaning.log
-    sed -i '/^$/d' $TASKS_DIRECTORY/cleaning.log
-    mv $TASKS_DIRECTORY/cleaning.log $TASKS_DIRECTORY/deleted.log
+    cp $DIRECTORY/deleted.log $DIRECTORY/backups/deleted.$timestamp.log
+    cat $DIRECTORY/deleted.log | sort -V > $DIRECTORY/cleaning.log
+    sed -i '/^$/d' $DIRECTORY/cleaning.log
+    mv $DIRECTORY/cleaning.log $DIRECTORY/deleted.log
 }
 
 clean $*

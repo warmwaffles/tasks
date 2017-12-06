@@ -13,5 +13,7 @@ install:
 	cp ./tasks-summary ${HOME}/bin/tasks-summary
 	cp ./tasks-uncomplete ${HOME}/bin/tasks-uncomplete
 	cp ./tasks-use ${HOME}/bin/tasks-use
+	cp ./tasks-home ${HOME}/bin/tasks-home
+	cp ./tasks-which ${HOME}/bin/tasks-which
 
 .PHONY: install

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+DIRECTORY=$(tasks-home)
+
+if [[ ! -f $DIRECTORY/org ]]
+then
+    echo "default" > $DIRECTORY/org
+fi
+
+cat $DIRECTORY/org

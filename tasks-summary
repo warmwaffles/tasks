@@ -2,21 +2,14 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+DIRECTORY=$(tasks-home)/$(tasks-which)
+
+if [[ ! -f $DIRECTORY/current.log ]]
+then
+    touch $DIRECTORY/current.log
+fi
+
 NOW=$(date +"%F %R")
-
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
 
 COLOR_OFF='\e[00m'
 COLOR_BLACK='\e[0;30m'
@@ -137,7 +130,7 @@ daily_summary() {
     local begin_yesterday=$(date +'%s' --date "00:00 yesterday")
     local completed_at=""
 
-    readarray -t items < $TASKS_DIRECTORY/current.log
+    readarray -t items < $DIRECTORY/current.log
 
     echo "*Yesterday*"
 
@@ -242,7 +235,7 @@ weekly_summary() {
     local end_of_week=$(date +'%s' --date "00:00 7 days")
     local completed_at=""
 
-    readarray -t items < $TASKS_DIRECTORY/current.log
+    readarray -t items < $DIRECTORY/current.log
 
     echo "*Last Week*"
 

@@ -2,48 +2,26 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
-
-# Setup the tasks directory if it hasn't been yet
-if [[ ! -f $TASKS_DIRECTORY ]]
-then
-    mkdir -p $TASKS_DIRECTORY
-    mkdir -p $TASKS_DIRECTORY/backups
-fi
-
-if [[ ! -f $TASKS_DIRECTORY/.gitignore ]]
-then
-    # Prepare the directory for git incase the user wants to back it up
-    echo "/backups" > $TASKS_DIRECTORY/.gitignore
-    echo "log.vacuum" >> $TASKS_DIRECTORY/.gitignore
-fi
+DIRECTORY=$(tasks-home)/$(tasks-which)
 
 # Check to ensure our counter is still present
-if [[ ! -f $TASKS_DIRECTORY/taskid ]]
+if [[ ! -f $DIRECTORY/taskid ]]
 then
-    echo "0" > $TASKS_DIRECTORY/taskid
+    echo "0" > $DIRECTORY/taskid
 fi
 
 # Check to make sure the log files are present
-if [[ ! -f $TASKS_DIRECTORY/current.log ]]
+if [[ ! -f $DIRECTORY/current.log ]]
 then
-    touch $TASKS_DIRECTORY/current.log
+    touch $DIRECTORY/current.log
 fi
 
-if [[ ! -f $TASKS_DIRECTORY/archived.log ]]
+if [[ ! -f $DIRECTORY/archived.log ]]
 then
-    touch $TASKS_DIRECTORY/archived.log
+    touch $DIRECTORY/archived.log
 fi
 
-if [[ ! -f $TASKS_DIRECTORY/deleted.log ]]
+if [[ ! -f $DIRECTORY/deleted.log ]]
 then
-    touch $TASKS_DIRECTORY/deleted.log
+    touch $DIRECTORY/deleted.log
 fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"

@@ -2,21 +2,12 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
-NOW=$(date +"%F %R")
+DIRECTORY=$(tasks-home)/$(tasks-which)
 
-if [[ ! -f $TASKS_DIRECTORY ]]
+if [[ ! -f $DIRECTORY/current.log ]]
 then
-    mkdir -p $TASKS_DIRECTORY
+    touch $DIRECTORY/current.log
 fi
-
-if [[ ! -f $TASKS_DIRECTORY/org ]]
-then
-    echo "default" > $TASKS_DIRECTORY/org
-fi
-
-ORGANIZATION=$(cat $TASKS_DIRECTORY/org)
-export TASKS_DIRECTORY="$TASKS_DIRECTORY/$ORGANIZATION"
 
 COLOR_OFF='\e[00m'
 COLOR_BLACK='\e[0;30m'
@@ -196,7 +187,7 @@ list() {
                 echo $line | pretty_message
                 ;;
         esac
-    done < <(cat $TASKS_DIRECTORY/current.log | sort -g)
+    done < <(cat $DIRECTORY/current.log | sort -g)
 }
 
 list $*

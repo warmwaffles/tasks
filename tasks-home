@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+
+if [[ ! -f $DIRECTORY ]]
+then
+    mkdir -p $DIRECTORY
+fi
+
+echo $DIRECTORY

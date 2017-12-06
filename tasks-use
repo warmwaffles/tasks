@@ -2,19 +2,14 @@
 
 set -e
 
-TASKS_DIRECTORY="${TASKS_DIRECTORY:-$HOME/.tasks}"
+DIRECTORY=$(tasks-home)
 
-if [[ ! -f $TASKS_DIRECTORY ]]
+if [[ -f $DIRECTORY/org ]]
 then
-    mkdir -p $TASKS_DIRECTORY
-fi
-
-if [[ -f $TASKS_DIRECTORY/org ]]
-then
-    CURRENT_ORG=$(cat $TASKS_DIRECTORY/org)
+    ORGANIZATION=$(cat $DIRECTORY/org)
 else
-    CURRENT_ORG="default"
-    echo "default" > $TASKS_DIRECTORY/org
+    ORGANIZATION="default"
+    echo "default" > $DIRECTORY/org
 fi
 
 usage() {
@@ -53,11 +48,13 @@ use() {
 
     changeto="${params[0]}"
 
-    echo "Switching from $CURRENT_ORG to $changeto"
-    echo "$changeto" > $TASKS_DIRECTORY/org
+    echo "Switching from $ORGANIZATION to $changeto"
+    echo "$changeto" > $DIRECTORY/org
 
-    rm $TASKS_DIRECTORY/current
-    ln -s $TASKS_DIRECTORY/$changeto $TASKS_DIRECTORY/current
+    mkdir -p $DIRECTORY/$changeto
+
+    rm $DIRECTORY/current
+    ln -s $DIRECTORY/$changeto $DIRECTORY/current
 }
 
 use $*

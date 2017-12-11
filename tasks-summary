@@ -176,7 +176,7 @@ daily_summary() {
         fi
 
         message=$(echo $item | extract_message | strip_completed | pretty_message)
-        echo "  • $message"
+        echo "  ● $message"
     done
 
 
@@ -217,14 +217,14 @@ daily_summary() {
         if [[ $status = "uncompleted" ]]
         then
             message=$(echo $item | extract_message | pretty_message)
-            echo "  • $message"
+            echo "  ○ $message"
             continue
         fi
 
         if [[ ! -z $completed_at ]] && [[ $completed_at < $end_today && $completed_at > $begin_today ]]
         then
             message=$(echo $item | extract_message | strip_completed | pretty_message)
-            echo -e "  • $message"
+            echo -e "  ● $message"
         fi
     done
 }
@@ -281,7 +281,7 @@ weekly_summary() {
         fi
 
         message=$(echo $item | extract_message | strip_completed | pretty_message)
-        echo "  • $message"
+        echo "  ● $message"
     done
 
 
@@ -322,14 +322,14 @@ weekly_summary() {
         if [[ $status = "uncompleted" ]]
         then
             message=$(echo $item | extract_message | pretty_message)
-            echo "  • $message"
+            echo "  ○ $message"
             continue
         fi
 
         if [[ ! -z $completed_at ]] && [[ $completed_at < $end_of_week && $completed_at > $begin_today ]]
         then
             message=$(echo $item | extract_message | strip_completed | pretty_message)
-            echo -e "  • $message"
+            echo -e "  ● $message"
         fi
     done
 }

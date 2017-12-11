@@ -31,6 +31,11 @@ clean() {
 
     local timestamp=$(date +'%s')
 
+    if [[ ! -f $DIRECTORY/backups ]]
+    then
+        mkdir -p $DIRECTORY/backups
+    fi
+
     # CURRENT
     cp $DIRECTORY/current.log $DIRECTORY/backups/current.$timestamp.log
     cat $DIRECTORY/current.log | sort -V > $DIRECTORY/cleaning.log

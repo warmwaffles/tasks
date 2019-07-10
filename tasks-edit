@@ -3,7 +3,7 @@
 set -e
 
 LOCATION="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DIRECTORY=$($LOCATION/tasks-home)/$($LOCATION/tasks-which)
+DIRECTORY=$($LOCATION/tasks-home)/current
 mkdir -p $DIRECTORY
 
 usage() {

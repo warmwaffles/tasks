@@ -55,7 +55,7 @@ use() {
 
     mkdir -p $DIRECTORY/$changeto
 
-    rm $DIRECTORY/current
+    rm -f $DIRECTORY/current
     ln -s $DIRECTORY/$changeto $DIRECTORY/current
 }
 

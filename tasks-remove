@@ -2,7 +2,9 @@
 
 set -e
 
-DIRECTORY=$(tasks-home)/$(tasks-which)
+LOCATION="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DIRECTORY=$($LOCATION/tasks-home)/$($LOCATION/tasks-which)
+mkdir -p $DIRECTORY
 
 if [[ ! -f $DIRECTORY/current.log ]]
 then

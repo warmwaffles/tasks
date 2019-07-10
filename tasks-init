@@ -2,7 +2,8 @@
 
 set -e
 
-DIRECTORY=$(tasks-home)/$(tasks-which)
+LOCATION="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DIRECTORY=$($LOCATION/tasks-home)/$($LOCATION/tasks-which)
 
 # Check to ensure our counter is still present
 if [[ ! -f $DIRECTORY/taskid ]]

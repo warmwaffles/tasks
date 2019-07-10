@@ -2,6 +2,8 @@
 
 set -e
 
+LOCATION="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 usage() {
     cat <<TXT
 USAGE: tasks <COMMAND> [OPTIONS]
@@ -69,51 +71,51 @@ TXT
 case $1 in
     add|a)
         shift
-        tasks-add $*
+        $LOCATION/tasks-add $*
         ;;
     list|ls|l)
         shift
-        tasks-list $*
+        $LOCATION/tasks-list $*
         ;;
     remove|rm)
         shift
-        tasks-remove $*
+        $LOCATION/tasks-remove $*
         ;;
     complete|c)
         shift
-        tasks-complete $*
+        $LOCATION/tasks-complete $*
         ;;
     uncomplete|C)
         shift;
-        tasks-uncomplete $*
+        $LOCATION/tasks-uncomplete $*
         ;;
     edit|e)
         shift
-        tasks-edit $*
+        $LOCATION/tasks-edit $*
         ;;
     summary|s)
         shift
-        tasks-summary $*
+        $LOCATION/tasks-summary $*
         ;;
     clean)
         shift
-        tasks-clean $*
+        $LOCATION/tasks-clean $*
         ;;
     archive)
         shift
-        tasks-archive $*
+        $LOCATION/tasks-archive $*
         ;;
     use)
         shift
-        tasks-use $*
+        $LOCATION/tasks-use $*
         ;;
     which)
         shift
-        tasks-which $*
+        $LOCATION/tasks-which $*
         ;;
     home)
         shift
-        tasks-home $*
+        $LOCATION/tasks-home $*
         ;;
     *)
         usage $*

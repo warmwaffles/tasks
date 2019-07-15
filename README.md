@@ -18,20 +18,16 @@ markups added.
 
   * `+tag` - A tag for a task. Useful for adding some meta information about a
     task.
-  * `#project` - Make a task apart of a project or multiple projects.
   * `@completed(DATE)` - Mark a task as completed.
-  * `@critical` - Mark a task as critical.
-  * `@important` - Mark a task as important.
+  * `@cancelled(DATE)` - Mark a task as cancelled.
   * `@high` - Mark a task as high priority.
+  * `@medium` - Mark a task as medium priority.
   * `@low` - Mark a task as low priority.
   * `@due(DATE)` - Mark a task as due on a specific date.
 
 ## Requirements
 
-* `ripgrep`
-* `sed`
-* `perl`
-* `date` (GNU flavor for now)
+* python 3
 
 ## Installing
 
@@ -39,7 +35,7 @@ Copy the files somewhere on your path. Alternatively, clone the repo and add the
 repo to your `$PATH`.
 
 ```sh
-cp tasks* ~/bin
+cp tasks.py ~/bin/tasks
 ```
 
 or
@@ -64,16 +60,13 @@ All this does is set the tasks to be stored in sub directories in the
 
 ```txt
 .
-├── current -> /home/warmwaffles/.tasks/simplecasual
-├── org
+├── context
 ├── personal
 │   ├── current.log
-│   ├── deleted.log
 │   ├── archived.log
 │   └── taskid
 └── simplecasual
     ├── current.log
-    ├── deleted.log
     ├── archived.log
     └── taskid
 ```

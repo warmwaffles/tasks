@@ -30,6 +30,7 @@ MEDIUM_PRIORITY_REGEX = re.compile(r"@medium")
 LOW_PRIORITY_REGEX = re.compile(r"@low")
 PRIORITY_REGEX = re.compile(f"@(low|medium|high)")
 BLOCKED_REGEX = re.compile(r"@blocked")
+DELAYED_REGEX = re.compile(r"@delayed")
 COMPLETED_REGEX = re.compile(r"(@completed\(.*\))")
 CANCELLED_REGEX = re.compile(r"(@cancelled\(.*\))")
 DUE_REGEX = re.compile(r"(@due\(.*\))")
@@ -152,7 +153,8 @@ class Task:
         due=None,
         priority=None,
         completed=None,
-        blocked=None
+        blocked=None,
+        delayed=None
     ):
         self.id = id
         self.message = message
@@ -160,6 +162,7 @@ class Task:
         self.priority = priority
         self.completed = completed
         self.blocked = blocked
+        self.delayed = delayed
         if tags:
             self.tags = tags
         else:
@@ -181,6 +184,10 @@ class Task:
 
     def _strip_blocked(self):
         self.message = BLOCKED_REGEX.sub("", self.message)
+        self.message = self.message.rstrip()
+
+    def _strip_delayed(self):
+        self.message = DELAYED_REGEX.sub("", self.message)
         self.message = self.message.rstrip()
 
     def _replace_due(self):
@@ -208,6 +215,15 @@ class Task:
             self.message = PRIORITY_REGEX.sub(f"@{level}", self.message)
         else:
             self.message += f" @{level}"
+
+    def delay(self):
+        self.delayed = True
+        self._strip_delayed()
+        self.message += " @delayed"
+
+    def undelay(self):
+        self.delayed = False
+        self._strip_delayed()
 
     def block(self):
         self.blocked = True
@@ -276,6 +292,12 @@ class Task:
             message
         )
 
+        # color delayed
+        message = DELAYED_REGEX.sub(
+            f"{Colors.WHITE_BOLD}@delayed{Colors.OFF}",
+            message
+        )
+
         return message
 
     def standup(self):
@@ -316,6 +338,8 @@ class Task:
                     self._replace_due()
             elif name == "blocked":
                 self.blocked = True
+            elif name == "delayed":
+                self.delayed = True
 
         return self
 
@@ -589,6 +613,24 @@ class TaskManager:
         task.set_priority(priority)
         self.current.update(task)
 
+    def delay_task(self, args):
+        task_id = args.task_id
+        task = self.current.find(task_id)
+        if not task:
+            printerr(f"Task({task_id}) not found")
+            return
+        task.delay()
+        self.current.update(task)
+
+    def undelay_task(self, args):
+        task_id = args.task_id
+        task = self.current.find(task_id)
+        if not task:
+            printerr(f"Task({task_id}) not found")
+            return
+        task.undelay()
+        self.current.update(task)
+
 
 manager = TaskManager(TASKS_PATH)
 manager.setup()
@@ -811,6 +853,36 @@ priority_parser.add_argument(
 )
 COMMANDS["priority"] = manager.set_priority
 COMMANDS["p"] = manager.set_priority
+
+# #############################################################################
+# Delayed
+delay_parser = subparser.add_parser(
+    "delay",
+    help="tag a task as delayed",
+    aliases=["d"]
+)
+delay_parser.add_argument(
+    "task_id",
+    type=int,
+    help="the id of the task"
+)
+COMMANDS["delay"] = manager.delay_task
+COMMANDS["d"] = manager.delay_task
+
+# #############################################################################
+# Undelay a task
+undelay_parser = subparser.add_parser(
+    "undelay",
+    help="undelay a task",
+    aliases=["D"]
+)
+undelay_parser.add_argument(
+    "task_id",
+    type=int,
+    help="the id of the task"
+)
+COMMANDS["undelay"] = manager.undelay_task
+COMMANDS["D"] = manager.undelay_task
 
 #
 # Now do the work

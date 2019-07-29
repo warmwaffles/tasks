@@ -81,6 +81,10 @@ def incomplete(task):
     return task.state == TaskState.INCOMPLETED
 
 
+def not_delayed(task):
+    return not task.delayed
+
+
 class Colors:
     OFF = '\033[00m'
     BLACK = '\033[0;30m'
@@ -563,13 +567,12 @@ class TaskManager:
         for task in filter(completed_today, tasks):
             print(task.standup())
 
-        for task in filter(incomplete, tasks):
+        for task in filter(not_delayed, filter(incomplete, tasks)):
             print(task.standup())
 
 
     def summary(self, args):
         self.summary_standup(args)
-        ...
 
     def switch_context(self, args):
         context_path = self.directory.joinpath("context")

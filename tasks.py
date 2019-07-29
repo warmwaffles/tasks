@@ -46,6 +46,29 @@ def parse_datetime(string):
     return datetime.strptime(string, "%Y-%m-%d %H:%M")
 
 
+def parse_relative_time(string):
+    if string == "today" or string == "now":
+        return datetime.now()
+    if string == "yesterday":
+        return datetime.now() - timedelta(days=1)
+    if string == "tomorrow":
+        return datetime.now() + timedelta(days=1)
+    return parse_datetime(string)
+
+
+def parse_completed(string):
+    if string == "today" or string == "now":
+        return datetime.now()
+    if string == "yesterday":
+        return datetime.now() - timedelta(days=1)
+
+    matched = DAY_REGEX.findall(string)
+    if matched:
+        return datetime.now() + timedelta(days=int(matched[0]))
+
+    return parse_datetime(string)
+
+
 def parse_due(string):
     if string == "today" or string == "now":
         return datetime.now()
@@ -202,7 +225,7 @@ class Task:
         if level == "low" or level == "l" or level == "1":
             level = "low"
             self.priority = Priority.LOW
-        elif level == "medium" or level =="m" or level == "2":
+        elif level == "medium" or level == "m" or level == "2":
             level = "medium"
             self.priority = Priority.MEDIUM
         elif level == "high" or level == "h" or level == "3":
@@ -238,10 +261,15 @@ class Task:
         self.blocked = False
         self._strip_blocked()
 
-    def complete(self):
+    def complete(self, at=None):
         self.state = TaskState.COMPLETED
         self._strip_state()
-        now = datetime.now().isoformat(sep=" ", timespec="minutes")
+        if at:
+            now = at
+        else:
+            now = datetime.now()
+
+        now = now.isoformat(sep=" ", timespec="minutes")
         self.message += f" @completed({now})"
 
     def uncomplete(self):
@@ -313,7 +341,7 @@ class Task:
 
     def to_s(self, formatted=True):
         if formatted:
-            return f"{self.id} - [{self.state.value}] - {self.formatted_message()}"
+            return f"{self.id} - [{self.state.value}] - {self.formatted_message()}"  # noqa
         return f"{self.id} - [{self.state.value}] - {self.message}"
 
     def apply(self, message):
@@ -335,7 +363,7 @@ class Task:
             elif name == "completed":
                 self.state = TaskState.COMPLETED
                 if parts:
-                    self.completed = parse_datetime(parts[1])
+                    self.completed = parse_completed(parts[1])
             elif name == "due":
                 if parts:
                     self.due = parse_due(parts[1])
@@ -531,11 +559,16 @@ class TaskManager:
 
     def complete_task(self, args):
         task_id = args.task_id
+        if args.at:
+            at = parse_relative_time(args.at)
+        else:
+            at = datetime.now()
+
         task = self.current.find(task_id)
         if not task:
             printerr(f"Task({task_id}) not found")
             return
-        task.complete()
+        task.complete(at)
         self.current.update(task)
 
     def cancel_task(self, args):
@@ -569,7 +602,6 @@ class TaskManager:
 
         for task in filter(not_delayed, filter(incomplete, tasks)):
             print(task.standup())
-
 
     def summary(self, args):
         self.summary_standup(args)
@@ -703,6 +735,12 @@ complete_parser.add_argument(
     "task_id",
     type=int,
     help="the id of the task"
+)
+complete_parser.add_argument(
+    "--at",
+    "-a",
+    type=str,
+    help="when the task was completed"
 )
 COMMANDS["complete"] = manager.complete_task
 COMMANDS["c"] = manager.complete_task
